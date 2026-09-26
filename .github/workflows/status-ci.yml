@@ -1,0 +1,44 @@
+name: payroll-status CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['payroll-status/**', '.github/workflows/status-ci.yml']
+  pull_request:
+    branches: [main]
+    paths: ['payroll-status/**', '.github/workflows/status-ci.yml']
+
+defaults:
+  run:
+    working-directory: payroll-status
+
+jobs:
+  check:
+    name: Typecheck & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # 本番 payroll-status サーバーは Node 22 で稼働（package.json engines と一致）
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: payroll-status/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      # 本番依存のみを high 以上でゲートする。dev 依存（tsx 等、ランタイム/本番には
+      # 載らない）は対象外。
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high

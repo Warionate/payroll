@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="payroll.warionate.com のサービス稼働状況をお知らせするステータスページです。">
+  <title>Payroll Status — ステータス</title>
+  <link rel="stylesheet" href="/css/style.css?v=8">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <div>
+        <div class="header-title">Payroll Status</div>
+        <div class="header-subtitle">payroll.warionate.com</div>
+      </div>
+      <div id="status-badge" class="status-badge">
+        <span class="status-dot"></span>
+        <span id="status-text">読み込み中</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div id="hero-banner" class="hero-banner" hidden></div>
+
+    <div id="loading" class="loading">読み込み中...</div>
+    <div id="feed" class="feed" hidden></div>
+    <div id="feed-empty" class="feed-empty" hidden>
+      現在、報告する問題はありません
+    </div>
+  </main>
+
+  <button id="update-indicator" class="update-indicator" type="button">
+    新しい更新があります
+  </button>
+
+  <footer class="footer">
+    <p>&copy; 2026 Warionate</p>
+  </footer>
+
+  <script src="/vendor/marked.min.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script src="/js/feed.js?v=10"></script>
+</body>
+</html>

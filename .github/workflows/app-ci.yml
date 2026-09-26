@@ -1,0 +1,253 @@
+name: payroll-app CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['payroll-app/**', '.github/workflows/app-ci.yml']
+  pull_request:
+    branches: [main]
+    paths: ['payroll-app/**', '.github/workflows/app-ci.yml']
+
+env:
+  NODE_ENV: test
+  ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY }}
+  JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+
+defaults:
+  run:
+    working-directory: payroll-app
+
+jobs:
+  test-server:
+    name: Server Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: payroll-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@payroll/shared
+
+      - name: Run shared package tests
+        run: npm run test --workspace=@payroll/shared
+
+      - name: Run server tests
+        run: npm run test --workspace=server
+
+      - name: Run server integration tests
+        run: npm run test:integration --workspace=server
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: payroll-app/server/logs/
+
+  test-client:
+    name: Client Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: payroll-app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@payroll/shared
+
+      - name: Run client tests
+        run: npm run test --workspace=client
+
+  audit:
+    name: Security Audit (production deps)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: payroll-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: payroll-app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@payroll/shared
+
+      - name: Run ESLint
+        run: npm run lint --workspaces --if-present
+
+      - name: Check Prettier formatting
+        run: npm run format:check
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: payroll-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@payroll/shared
+
+      - name: Type check server
+        run: npm run typecheck --workspace=server
+
+      - name: Type check client
+        run: npm run typecheck --workspace=client
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@payroll/shared
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Run E2E tests
+        run: npm run test:e2e --workspace=client -- --project=chromium
+        env:
+          ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY }}
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: payroll-app/client/playwright-report/
+          retention-days: 7
+
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [test-server, test-client, lint, typecheck]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: payroll-app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@payroll/shared
+
+      - name: Build server
+        run: npm run build --workspace=server
+
+      - name: Build client
+        run: npm run build --workspace=client
+
+      - name: Report bundle size
+        run: |
+          echo "## Client Bundle Size" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          du -sh client/dist/
+          du -sh client/dist/assets/*.js | sort -rh | head -20
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          du -sh client/dist/ >> $GITHUB_STEP_SUMMARY
+          # Fail if total JS exceeds 3MB (compressed will be much smaller)
+          TOTAL_JS=$(find client/dist/assets -name '*.js' -exec cat {} + | wc -c)
+          echo "Total JS size: $((TOTAL_JS / 1024))KB"
+          if [ "$TOTAL_JS" -gt 3145728 ]; then
+            echo "::warning::Total JS bundle exceeds 3MB ($((TOTAL_JS / 1024))KB)"
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-build
+          path: payroll-app/client/dist/
+          retention-days: 7

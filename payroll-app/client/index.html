@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo-icon.svg" />
+    <link rel="preload" as="image" href="/logo-header.svg" />
+    <link rel="apple-touch-icon" href="/logo-icon.png" />
+    <link rel="apple-touch-icon-precomposed" href="/logo-icon.png" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Payroll App" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta
+      name="description"
+      content="個人指導塾向けの給与管理システム。勤務記録、給与計算、シフト管理を効率化します。"
+    />
+    <title>Payroll App</title>
+    <!-- 起動スプラッシュ（React マウント前の白画面を防ぐ）。CSP の styleSrc は
+         'unsafe-inline' を許可しているためインライン style を使用。React が
+         #root を置換した時点で自動的に消える。SplashScreen.tsx と同じ見た目に
+         揃え、マウント前後で継ぎ目なく繋ぐこと。 -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+      }
+      html.dark #splash {
+        background: #0f172a;
+      }
+      #splash .splash-logo {
+        width: 240px;
+        height: auto;
+      }
+      #splash .splash-status {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-top: 40px;
+      }
+      #splash .splash-ring {
+        width: 15px;
+        height: 15px;
+        border-radius: 9999px;
+        border: 2px solid #d8e6f2;
+        border-top-color: #2f95dc;
+        animation: splash-spin 0.8s linear infinite;
+      }
+      html.dark #splash .splash-ring {
+        border-color: #2a3a52;
+        border-top-color: #2f95dc;
+      }
+      #splash .splash-text {
+        font-family: Arial, Helvetica, 'Hiragino Kaku Gothic ProN',
+          'Noto Sans JP', sans-serif;
+        font-size: 13px;
+        font-weight: 400;
+        letter-spacing: 0.06em;
+        color: #94a3b8;
+      }
+      html.dark #splash .splash-text {
+        color: #64748b;
+      }
+      @keyframes splash-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash .splash-ring {
+          animation-duration: 1.5s;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root">
+      <div id="splash">
+        <img class="splash-logo" src="/logo-header.svg" alt="Payroll App" />
+        <div class="splash-status">
+          <span class="splash-ring"></span>
+          <span class="splash-text">読み込み中です</span>
+        </div>
+      </div>
+    </div>
+    <!-- 白画面セルフヒール: 古いチャンク参照で起動失敗したとき SW/キャッシュを
+       破棄してリロードする。モジュール読み込み前に登録するため最初に置く -->
+    <script src="/recovery.js"></script>
+    <!-- ダークモード初期化: React マウント前に class を付与してフラッシュを防ぐ。
+       CSP が inline script を許可していないため外部ファイル（'self'）で読み込む -->
+    <script src="/theme-init.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- Cloudflare Web Analytics -->
+    <script
+      defer
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon='{"token": "ea38815799e7422ba955f91d2b7751cb"}'
+    ></script>
+    <!-- End Cloudflare Web Analytics -->
+  </body>
+</html>

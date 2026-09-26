@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Payroll Status 管理</title>
+  <link rel="stylesheet" href="/css/admin.css?v=1">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="wrap">
+      <div class="brand">Payroll Status <small>管理</small></div>
+      <nav class="topnav" aria-label="ページ">
+        <a href="/">公開ページ</a>
+        <a href="/cdn-cgi/access/logout">ログアウト</a>
+      </nav>
+    </div>
+  </header>
+
+  <div id="session-banner" class="session-banner" role="alert" hidden>
+    <div class="wrap">
+      <span>ログインの有効期限が切れました。再読み込みしてログインし直してください。</span>
+      <button type="button" class="btn btn--sm" data-action="reload">再読み込み</button>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <section id="now" class="now" aria-label="現在の状態"></section>
+
+    <section aria-labelledby="settings-h">
+      <div class="section-head">
+        <h2 id="settings-h">公開設定</h2>
+        <span class="aside">変更はすぐに公開ページへ反映されます</span>
+      </div>
+      <div class="settings" id="settings"></div>
+    </section>
+
+    <div class="work">
+      <section aria-labelledby="posts-h">
+        <div class="list-tools">
+          <h2 id="posts-h">投稿 <span class="count mono" id="post-count"></span></h2>
+          <div class="seg" id="filter" role="group" aria-label="種別で絞り込み"></div>
+        </div>
+        <ul class="posts" id="posts"></ul>
+        <p class="list-note">直近50件を表示しています</p>
+      </section>
+
+      <section class="composer" id="composer" aria-labelledby="composer-h">
+        <div class="composer-head">
+          <h2 id="composer-h">新規投稿</h2>
+          <select class="select" id="template" aria-label="テンプレート">
+            <option value="">テンプレートから書く…</option>
+            <option value="incident">障害発生</option>
+            <option value="progress">障害の続報</option>
+            <option value="resolved">復旧</option>
+            <option value="maintenance">メンテナンス予告</option>
+          </select>
+        </div>
+        <form class="composer-body" id="post-form" novalidate>
+          <div class="field">
+            <span class="label" id="f-type-label">種別</span>
+            <div class="seg" id="f-type" role="group" aria-labelledby="f-type-label"></div>
+          </div>
+          <div class="field" id="status-field">
+            <span class="label" id="f-status-label">進行状況</span>
+            <div class="seg" id="f-status" role="group" aria-labelledby="f-status-label"></div>
+          </div>
+          <div class="field">
+            <label class="label" for="f-title">タイトル</label>
+            <input class="input" id="f-title" maxlength="200" autocomplete="off" placeholder="例: 給与明細が表示されない不具合">
+          </div>
+          <div class="field">
+            <div class="body-tabs">
+              <label class="label" for="f-content">本文 <span class="label-sub">Markdown</span></label>
+              <div class="tabs">
+                <button type="button" id="tab-write" data-action="tab-write" aria-pressed="true">書く</button>
+                <button type="button" id="tab-preview" data-action="tab-preview" aria-pressed="false">プレビュー</button>
+              </div>
+            </div>
+            <textarea id="f-content" maxlength="10000" placeholder="状況・影響範囲・次の連絡予定を書くと伝わりやすくなります"></textarea>
+            <div class="preview md" id="preview" hidden></div>
+          </div>
+          <ul class="effects" id="effects"></ul>
+          <div class="composer-foot">
+            <button class="btn btn--primary" type="submit" id="submit">投稿する</button>
+            <button class="btn btn--ghost" type="button" id="cancel-edit" data-action="cancel-edit" hidden>編集をやめる</button>
+            <span class="kbd">Ctrl + Enter</span>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="/vendor/marked.min.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script src="/js/admin.js?v=12"></script>
+</body>
+</html>

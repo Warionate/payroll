@@ -1,0 +1,24 @@
+name = "payroll-maintenance-shield"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+
+# 本番ルート: payroll.warionate.com の全パスを Worker に通す
+# 注: zone_name は Cloudflare 上の登録ゾーン名と完全一致させる
+routes = [
+  { pattern = "payroll.warionate.com/*", zone_name = "warionate.com" }
+]
+
+[vars]
+# payroll-status のベース URL（/api/maintenance-status を叩く）
+STATUS_API_BASE = "https://payroll-status.warionate.com"
+# 緊急時に "true" にすると Worker が常に origin に流す
+WORKER_BYPASS = "false"
+
+# payroll-status（障害監視）自体の死活監視。止まっていたら DISCORD_WEBHOOK_URL（secret）へ通知する。
+# 間隔を変えたら src/index.ts の LIVENESS_CRON_INTERVAL_MS も合わせる
+[triggers]
+crons = ["*/5 * * * *"]
+
+# observability を有効化しておくと wrangler tail でログが見える
+[observability]
+enabled = true

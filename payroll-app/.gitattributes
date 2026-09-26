@@ -1,0 +1,15 @@
+# Normalize line endings to LF for all text files, regardless of the
+# checking-out machine's core.autocrlf setting (avoids Windows CRLF checkouts
+# tripping prettier's endOfLine: "lf" rule).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

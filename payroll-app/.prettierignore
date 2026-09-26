@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+client/dist/
+server/dist/
+
+# Dev dist (PWA)
+client/dev-dist/
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/
+
+# Backups
+backups/
+
+# Test results
+test-results/
+playwright-report/
+coverage/
+
+# Generated files
+drizzle/
+
+# Environment
+.env
+.env.*
+
+# Package lock
+package-lock.json

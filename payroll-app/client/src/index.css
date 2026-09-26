@@ -1,0 +1,560 @@
+@import 'tailwindcss';
+
+/* ダークモードは OS 設定ではなく <html class="dark"> で切り替える
+   （設定画面のテーマ選択 + index.html の初期化スクリプトが付与する） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tailwind v4 changed default border-color from gray-200 to currentColor.
+   Restore v3 behavior so `border` alone doesn't produce black lines. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
+
+@theme {
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  --color-primary-950: #1e1b4b;
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 画面全体を覆うモーダルのオーバーレイ用。iPhone などノッチ／角丸ディスプレイ
+   （viewport-fit=cover）で、中央寄せしたモーダルカードや全画面エディタの端が
+   丸い角・ノッチ・ホームインジケータに被らないよう、基本余白 1rem に各辺の
+   セーフエリアを加算する。 */
+@utility overlay-safe {
+  padding-top: calc(env(safe-area-inset-top) + 1rem);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  padding-left: calc(env(safe-area-inset-left) + 1rem);
+  padding-right: calc(env(safe-area-inset-right) + 1rem);
+}
+
+/* 全画面（フルブリード）オーバーレイ用。背景色は端まで敷いたまま、内側の
+   操作 UI だけをセーフエリア分だけ内側へ寄せる（基本余白は各コンポーネント
+   が内部の padding で持つ想定なので、ここではセーフエリア分のみ）。 */
+@utility inset-safe {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+@utility btn-interactive {
+  transition-property: transform;
+  transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+  &:active {
+    scale: 0.95;
+    opacity: 0.8;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:active {
+      scale: 1;
+    }
+  }
+}
+
+@utility glass {
+  background-color: rgb(255 255 255 / 0.8);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgb(255 255 255 / 0.2);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+@utility glass-dark {
+  background-color: rgb(17 24 39 / 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgb(55 65 81 / 0.5);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+@utility animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body {
+  font-family:
+    'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+  background-color: #f8fafc;
+  /* Slate-50 for a cleaner look */
+  color: #1e293b;
+  /* Slate-800 for text */
+}
+
+/* フォーカス状態の視覚的インジケーター
+   orange-600 — ブランド色（インディゴ）と被らない色で視認性を確保 */
+*:focus-visible {
+  outline: 2px solid #ea580c;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #ea580c;
+  outline-offset: 2px;
+}
+
+/* レスポンシブ: モバイル */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+    /* 13px → 14px（可読性向上） */
+  }
+}
+
+/* レスポンシブ: タブレット */
+@media (min-width: 768px) and (max-width: 1024px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 起動スプラッシュ（SplashScreen / index.html の静的スプラッシュ）の
+   細リングスピナー。ブランド色（#2f95dc）の上端だけ着色して回す。
+   index.html 側のインライン CSS と見た目を一致させること。 */
+.splash-spinner {
+  width: 15px;
+  height: 15px;
+  border-radius: 9999px;
+  border: 2px solid #d8e6f2;
+  border-top-color: #2f95dc;
+  animation: splash-spin 0.8s linear infinite;
+}
+.dark .splash-spinner {
+  border-color: #2a3a52;
+  border-top-color: #2f95dc;
+}
+@keyframes splash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* アニメーション抑制設定のユーザーには動きを最小化する
+   （スピナー・モーダルの slide-up・トランジション等を一括で停止） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* ローディングスピナー（`animate-spin`）は「読み込み中」を伝える必須の
+     フィードバックであり、停止すると固まったように見えてしまう。
+     アニメーション抑制下でも回転だけは維持する（負担軽減のため少し遅め）。
+     上の `*` ルールが iteration-count を 1・duration を 0.01ms に潰すため、
+     スピナー限定でここで明示的に復元する（`.animate-spin` の方が詳細度が高い）。 */
+  .animate-spin,
+  .splash-spinner {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+/* ── ダークモード ──────────────────────────────────────────────
+   コンポーネントは `bg-white` `text-gray-800` 等のライト前提の
+   ユーティリティで書かれているため、`.dark` スコープで
+   グレースケールの CSS 変数を反転し、白サーフェスだけ
+   ユーティリティ単位で上書きする方式を取る。
+   新しいコンポーネントも追加の dark: クラスなしで自動対応する。 */
+.dark {
+  color-scheme: dark;
+
+  /* グレースケール反転（slate 系のダークパレット） */
+  --color-gray-50: #1e293b; /* hover や淡い背景 */
+  --color-gray-100: #283548; /* チップ・モーダルヘッダー */
+  --color-gray-200: #3b4a61; /* ボーダー */
+  --color-gray-300: #51617c;
+  --color-gray-400: #7c8ba1; /* 弱いテキスト・アイコン */
+  --color-gray-500: #97a5ba; /* 補助テキスト */
+  --color-gray-600: #b5c1d2;
+  --color-gray-700: #cfd8e5;
+  --color-gray-800: #e6ecf4; /* 主要テキスト */
+  --color-gray-900: #f1f5fb;
+
+  /* 色付きの最淡色（-50）は背景・枠・グラデーションにしか使われていない
+     （text-*-50 は不使用）ため、変数ごとダークトーンに差し替える。
+     -100 以上は text-blue-100 等（グラデーションカード上の文字色）が
+     あるため変数は触らず、下の @layer utilities で個別に上書きする */
+  --color-blue-50: #1c2a4a;
+  --color-red-50: #3a1f24;
+  --color-green-50: #152e22;
+  --color-orange-50: #38271a;
+  --color-purple-50: #2d2347;
+  --color-yellow-50: #332a14;
+  --color-amber-50: #34290f;
+  --color-indigo-50: #232a4d;
+  --color-teal-50: #14302d;
+  --color-slate-50: #1e293b;
+  --color-primary-50: #232a4d;
+  --color-primary-100: #2b2a55; /* ボトムナビのアクティブチップ等 */
+
+  /* react-hot-toast（main.tsx の toastOptions が参照） */
+  --toast-bg: #1b2638;
+  --toast-color: #e6ecf4;
+}
+
+.dark body {
+  background-color: #0f172a;
+  color: #e6ecf4;
+}
+
+@layer utilities {
+  /* 白サーフェス（カード・モーダル等）をダークサーフェスに。
+     :where() で詳細度を 0 に抑え、hover:bg-gray-* 等の
+     ユーティリティが引き続き勝てるようにする */
+  .dark :where(.bg-white) {
+    background-color: #1b2638;
+  }
+
+  .dark :where(.glass) {
+    background-color: rgb(17 24 39 / 0.85);
+    border-color: rgb(55 65 81 / 0.5);
+  }
+
+  /* 色付きの淡色背景（-100 はテキスト用途があるため変数を触らず
+     bg ユーティリティ単位で上書きする） */
+  .dark :where(.bg-blue-100) {
+    background-color: #1e3a5f;
+  }
+  .dark :where(.bg-red-100) {
+    background-color: #4c2528;
+  }
+  .dark :where(.bg-green-100) {
+    background-color: #1c3d2c;
+  }
+  .dark :where(.bg-orange-100) {
+    background-color: #4a3220;
+  }
+  .dark :where(.bg-orange-200) {
+    background-color: #5d3f23;
+  }
+  .dark :where(.bg-purple-100) {
+    background-color: #3a2c59;
+  }
+
+  /* hover 付き淡色背景（詳細度の都合で :where は使えない。
+     -50 は変数差し替えで自動対応するため -100 のみ） */
+  .dark .hover\:bg-blue-100:hover {
+    background-color: #1e3a5f;
+  }
+  .dark .hover\:bg-red-100:hover {
+    background-color: #4c2528;
+  }
+  .dark .hover\:bg-purple-100:hover {
+    background-color: #3a2c59;
+  }
+
+  /* 色付きの淡色ボーダー（枠）。-50 は変数差し替えで対応済み */
+  .dark :where(.border-blue-100, .border-blue-200, .border-blue-300) {
+    border-color: #2e4a7d;
+  }
+  .dark :where(.border-red-100, .border-red-200) {
+    border-color: #63363c;
+  }
+  .dark :where(.border-green-100, .border-green-200, .border-green-300) {
+    border-color: #2a553f;
+  }
+  .dark :where(.border-orange-100, .border-orange-200) {
+    border-color: #614430;
+  }
+  .dark :where(.border-purple-100, .border-purple-200, .border-purple-300) {
+    border-color: #4c3b70;
+  }
+  .dark :where(.border-slate-200) {
+    border-color: var(--color-gray-200);
+  }
+
+  /* リング（枠線）の取り漏れ。ring-offset の既定色は白（#fff）のため、
+     ダークではカード面の色に合わせる。ring-blue-200 は淡色なので暗色へ */
+  .dark :where(.ring-offset-1, .ring-offset-2) {
+    --tw-ring-offset-color: #1b2638;
+  }
+  .dark :where(.ring-blue-200) {
+    --tw-ring-color: #2e4a7d;
+  }
+
+  /* ネイティブ <select> とドロップダウンリスト。color-scheme: dark だけでは
+     環境によって白い背景のままになるため、明示的に塗る */
+  .dark :where(select),
+  .dark :where(select option) {
+    background-color: #1b2638;
+    color: var(--color-gray-800);
+  }
+
+  /* 黒系ボタン（濃グレー背景 + text-white）はグレー反転すると
+     白ボタンに白文字になってしまうため、ダークでも暗いボタンとして保つ */
+  .dark :where(.bg-gray-700.text-white, .bg-gray-800.text-white, .bg-gray-900.text-white) {
+    background-color: #3b4a61;
+  }
+  .dark .text-white.hover\:bg-gray-700:hover,
+  .dark .text-white.hover\:bg-gray-800:hover,
+  .dark .text-white.hover\:bg-gray-900:hover {
+    background-color: #51617c;
+  }
+
+  /* ダーク背景でのコントラスト確保のため、色付きテキストを明色側へ。
+     bg-*-600 等（ボタン背景）には影響しないようテキスト
+     ユーティリティだけを上書きする */
+  .dark :where(.text-blue-500, .text-blue-600) {
+    color: #60a5fa;
+  }
+  .dark :where(.text-blue-700) {
+    color: #93c5fd;
+  }
+  .dark :where(.text-blue-800) {
+    color: #bfdbfe;
+  }
+  .dark :where(.text-red-500, .text-red-600) {
+    color: #f87171;
+  }
+  .dark :where(.text-red-700) {
+    color: #fca5a5;
+  }
+  .dark :where(.text-red-800) {
+    color: #fecaca;
+  }
+  .dark :where(.text-green-500, .text-green-600) {
+    color: #4ade80;
+  }
+  .dark :where(.text-green-700) {
+    color: #86efac;
+  }
+  .dark :where(.text-green-800) {
+    color: #bbf7d0;
+  }
+  .dark :where(.text-orange-500, .text-orange-600) {
+    color: #fb923c;
+  }
+  .dark :where(.text-orange-700) {
+    color: #fdba74;
+  }
+  .dark :where(.text-orange-800) {
+    color: #fed7aa;
+  }
+  .dark :where(.text-purple-500, .text-purple-600) {
+    color: #c084fc;
+  }
+  .dark :where(.text-purple-700) {
+    color: #d8b4fe;
+  }
+  .dark :where(.text-purple-800) {
+    color: #e9d5ff;
+  }
+  .dark :where(.text-yellow-500, .text-yellow-600) {
+    color: #facc15;
+  }
+  .dark :where(.text-yellow-700) {
+    color: #fde047;
+  }
+  .dark :where(.text-indigo-600) {
+    color: #818cf8;
+  }
+  .dark :where(.text-amber-600) {
+    color: #fbbf24;
+  }
+  .dark :where(.text-teal-600) {
+    color: #2dd4bf;
+  }
+  .dark :where(.text-teal-700) {
+    color: #5eead4;
+  }
+  .dark :where(.text-teal-800) {
+    color: #99f6e4;
+  }
+  .dark :where(.text-pink-600) {
+    color: #f472b6;
+  }
+  .dark :where(.text-slate-700) {
+    color: var(--color-gray-700);
+  }
+  .dark :where(.text-slate-800) {
+    color: var(--color-gray-800);
+  }
+  .dark :where(.text-primary-600) {
+    color: #a5b4fc;
+  }
+  .dark .hover\:text-primary-600:hover {
+    color: #a5b4fc;
+  }
+}
+
+/* Markdown のダーク対応 */
+.dark .markdown-content code {
+  background-color: #283548;
+}
+
+.dark .markdown-content blockquote {
+  border-left-color: #3b4a61;
+  color: #97a5ba;
+}
+
+.dark .markdown-content th,
+.dark .markdown-content td {
+  border-color: #3b4a61;
+}
+
+.dark .markdown-content th {
+  background-color: #1e293b;
+}
+
+.dark .markdown-content hr {
+  border-top-color: #3b4a61;
+}
+
+/* Markdown Content Styles */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  font-weight: 700;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content h1 {
+  font-size: 1.5em;
+}
+
+.markdown-content h2 {
+  font-size: 1.25em;
+}
+
+.markdown-content h3 {
+  font-size: 1.1em;
+}
+
+.markdown-content p {
+  margin-bottom: 0.75em;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-content code {
+  background-color: #f1f5f9;
+  padding: 0.125em 0.375em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+  font-family: ui-monospace, monospace;
+}
+
+.markdown-content pre {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 1em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  margin-bottom: 0.75em;
+}
+
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #e2e8f0;
+  padding-left: 1em;
+  color: #64748b;
+  font-style: italic;
+  margin-bottom: 0.75em;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.75em;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #e2e8f0;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: #f8fafc;
+  font-weight: 600;
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1em 0;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content del {
+  text-decoration: line-through;
+  color: #94a3b8;
+}

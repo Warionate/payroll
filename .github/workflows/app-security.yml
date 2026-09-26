@@ -1,0 +1,30 @@
+name: payroll-app Security Audit
+
+on:
+  schedule:
+    # Run weekly on Monday at 9:00 AM JST (0:00 UTC)
+    - cron: '0 0 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+defaults:
+  run:
+    working-directory: payroll-app
+
+jobs:
+  audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # devDependency 含む全件チェック。失敗時は GitHub の workflow 失敗通知で気づける。
+      # PR 単位のチェック（本番依存のみ・ブロッキング）は ci.yml の audit / dependency-review が担う。
+      - name: Audit dependencies
+        run: npm audit --audit-level=high

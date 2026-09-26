@@ -1,0 +1,30 @@
+{
+  // エディタ設定
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  // ファイル設定
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  // JavaScript/TypeScript
+  "javascript.preferences.quoteStyle": "single",
+  "typescript.preferences.quoteStyle": "single",
+  // ESLint
+  "eslint.validate": ["javascript", "javascriptreact"],
+  // Tailwind CSS
+  "tailwindCSS.includeLanguages": {
+    "javascript": "javascript",
+    "javascriptreact": "javascript"
+  },
+  // 検索除外
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/*.db": true
+  }
+}
