@@ -10,18 +10,34 @@ export const users = sqliteTable(
   'users',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
+    // ユーザー ID（ログインに使う）。英小文字・数字・. _ - だけ（@payroll/shared の LOGIN_ID_PATTERN）
     username: text('username').notNull().unique(),
+    // 表示名（画面に出す名前）。日本語も可
+    display_name: text('display_name'),
     password_hash: text('password_hash').notNull(),
     role: text('role').default('user'),
+    // カレンダー連携の URL のトークン。暗号化して持つ（画面に URL を出すため）。照合はハッシュで行う
     calendar_token: text('calendar_token'),
+    calendar_token_hash: text('calendar_token_hash'),
     calendar_token_created_at: text('calendar_token_created_at'),
     created_at: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
     // Authentik（OIDC）の sub。ログイン済みの本人が設定画面から連携したときだけ入る。
     // プロバイダの sub_mode は user_id なので、Authentik の利用者番号（pk）の文字列になる。
     oidc_sub: text('oidc_sub').unique(),
+    // 最後に Authentik で二段階（ID トークンの amr に mfa・user・sc）を済ませてログインした時刻。
+    // これがあるときだけ、Authentik 連携を二段階の手段として数える（Authentik の二段階は任意のため）
+    oidc_mfa_at: text('oidc_mfa_at'),
     // 確認済みのメールアドレス（小文字）。確認前のアドレスはここに入れず email_tokens に持つ。
     // パスワード再設定とログインに使う。Authentik との突き合わせには使わない
     email: text('email').unique(),
+    // 認証アプリ（TOTP）。secret は暗号化して持つ。enabled_at が NULL の間は登録の途中（未確認）
+    totp_secret: text('totp_secret'),
+    totp_enabled_at: text('totp_enabled_at'),
+    // 最後に通したコードの時間枠。同じコードの使い回しを防ぐ
+    totp_last_step: integer('totp_last_step'),
+    // 新規登録した人が最初の設定を済ませる期限。過ぎても済んでいなければアカウントごと消す。
+    // 済んだら NULL に戻す。この仕組みより前からの利用者は NULL（消さない）
+    setup_deadline: text('setup_deadline'),
   },
   (table) => [index('idx_users_calendar_token').on(table.calendar_token)],
 );
@@ -327,6 +343,8 @@ export const refreshTokens = sqliteTable(
     // この列をセットしないため、グレース対象外になる。
     revoked_at: text('revoked_at'),
     created_at: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
+    // どのログイン（sessions）から続いているトークンか。0008 より前に発行された行は NULL
+    session_id: text('session_id').references(() => sessions.id, { onDelete: 'cascade' }),
   },
   (table) => [
     index('idx_refresh_tokens_token').on(table.token),
@@ -346,6 +364,8 @@ export const oidcStates = sqliteTable('oidc_states', {
   nonce: text('nonce').notNull(),
   purpose: text('purpose').notNull(),
   user_id: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  // purpose 'reauth' のときの、本人確認を済ませたことにするログイン（sessions.id）
+  session_id: text('session_id'),
   created_at: text('created_at').notNull(),
 });
 
@@ -396,4 +416,74 @@ export const emailTokens = sqliteTable(
     created_at: text('created_at').notNull(),
   },
   (table) => [index('idx_email_tokens_user_id').on(table.user_id)],
+);
+
+// 22. Sessions（1回のログイン = 1行。リフレッシュトークンはこれにぶら下がって入れ替わる）
+// expires_at はログインした時点から固定（使い続けても延びない）。
+// authenticated_at は最後に本人確認（ログイン・再確認）をした時刻で、大事な操作の前に見る
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    user_id: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    method: text('method').notNull(), // password / passkey / oidc / register / legacy
+    ip: text('ip'),
+    user_agent: text('user_agent'),
+    created_at: text('created_at').notNull(),
+    last_used_at: text('last_used_at').notNull(),
+    authenticated_at: text('authenticated_at').notNull(),
+    expires_at: text('expires_at').notNull(),
+    revoked_at: text('revoked_at'),
+  },
+  (table) => [index('idx_sessions_user_id').on(table.user_id)],
+);
+
+// 23. Known Devices（ログインしたことのある端末。端末 Cookie のハッシュだけを持つ）
+export const knownDevices = sqliteTable(
+  'known_devices',
+  {
+    user_id: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    device_hash: text('device_hash').notNull(),
+    first_seen_at: text('first_seen_at').notNull(),
+    last_seen_at: text('last_seen_at').notNull(),
+    // 「この端末では認証アプリのコードを求めない」の期限。NULL なら毎回求める
+    mfa_trusted_until: text('mfa_trusted_until'),
+  },
+  (table) => [primaryKey({ columns: [table.user_id, table.device_hash] })],
+);
+
+// 24. Security Events（ログイン・パスワード変更などの記録。本人が設定画面で見る）
+export const securityEvents = sqliteTable(
+  'security_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    user_id: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    ip: text('ip'),
+    user_agent: text('user_agent'),
+    detail: text('detail'),
+    created_at: text('created_at').notNull(),
+  },
+  (table) => [index('idx_security_events_user_created').on(table.user_id, table.created_at)],
+);
+
+// 25. Recovery Codes（認証アプリを失くしたとき用の使い捨てコード。ハッシュだけを持つ）
+export const recoveryCodes = sqliteTable(
+  'recovery_codes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    user_id: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    code_hash: text('code_hash').notNull(),
+    used_at: text('used_at'),
+    created_at: text('created_at').notNull(),
+  },
+  (table) => [index('idx_recovery_codes_user_id').on(table.user_id)],
 );

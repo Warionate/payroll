@@ -57,6 +57,55 @@
       "when": 1790236800000,
       "tag": "0007_add_email",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790240400000,
+      "tag": "0008_add_sessions_security_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1790244000000,
+      "tag": "0009_add_totp",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790247600000,
+      "tag": "0010_add_display_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1790251200000,
+      "tag": "0011_add_setup_deadline",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790254800000,
+      "tag": "0012_add_mfa_trusted_until",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1790258400000,
+      "tag": "0013_add_calendar_token_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1790262000000,
+      "tag": "0014_add_oidc_mfa",
+      "breakpoints": true
     }
   ]
 }

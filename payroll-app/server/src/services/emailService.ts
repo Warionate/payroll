@@ -7,7 +7,6 @@
  * - 再設定したら全端末のログインを切る
  * - リンクのトークンはハッシュだけを DB に保存する
  */
-import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import { z } from 'zod';
 import logger from '../utils/logger.js';
@@ -15,6 +14,10 @@ import { emailTokenRepository } from '../repositories/emailTokenRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { mailService } from './mailService.js';
 import { authService } from './authService.js';
+import { hashPassword } from '../utils/password.js';
+import { recordSecurityEvent } from '../utils/securityLog.js';
+import { sendAccountNotice } from '../utils/accountNotice.js';
+import { isPwnedPassword, PWNED_PASSWORD_MESSAGE } from '../utils/pwnedPasswords.js';
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 30 * 60 * 1000;
@@ -103,6 +106,7 @@ export const emailService = {
       throw new EmailError('このメールアドレスは使えません');
     }
     userRepository.setEmail(row.user_id, row.email);
+    recordSecurityEvent(row.user_id, 'email_verified', {}, row.email);
     logger.info(`Email verified: user #${row.user_id}`);
     return row.email;
   },
@@ -154,6 +158,8 @@ export const emailService = {
 
   /** 再設定リンクの処理。新しいパスワードを設定し、全端末のログインを切る */
   async resetPassword(token: string, password: string): Promise<void> {
+    // リンクを使い切る前に確かめる（漏洩済みで断ったあとも、同じリンクで選び直せるように）
+    if (await isPwnedPassword(password)) throw new EmailError(PWNED_PASSWORD_MESSAGE);
     const row = emailTokenRepository.take(hashToken(token), 'reset');
     if (!row) throw new EmailError('リンクが無効か、有効期限が切れています');
     const user = userRepository.findById(row.user_id);
@@ -164,8 +170,10 @@ export const emailService = {
     if (password.toLowerCase().includes(user.username.toLowerCase())) {
       throw new EmailError('パスワードにユーザー名を含めることはできません');
     }
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await hashPassword(password);
     userRepository.updatePassword(user.id, hash);
+    recordSecurityEvent(user.id, 'password_reset');
+    sendAccountNotice(user, 'password_reset');
     emailTokenRepository.deleteForUser(user.id, 'reset');
     authService.revokeAllUserTokens(user.id);
     logger.info(`Password reset completed: user #${user.id}`);

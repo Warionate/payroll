@@ -12,11 +12,14 @@ export interface RefreshTokenRow {
   expires_at: string;
   revoked: number;
   revoked_at: string | null;
+  session_id: string | null;
 }
 
 export const refreshTokenRepository = {
-  create(token: string, userId: number, expiresAt: string): void {
-    db.insert(refreshTokens).values({ token, user_id: userId, expires_at: expiresAt }).run();
+  create(token: string, userId: number, expiresAt: string, sessionId: string): void {
+    db.insert(refreshTokens)
+      .values({ token, user_id: userId, expires_at: expiresAt, session_id: sessionId })
+      .run();
   },
 
   findByToken(token: string): RefreshTokenRow | undefined {

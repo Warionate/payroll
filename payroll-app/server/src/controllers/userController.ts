@@ -19,8 +19,18 @@ export const userController = {
 
   async updateProfile(req: Request, res: Response) {
     const userId = parseInt(req.params.id as string, 10);
-    const { username } = req.body;
-    await userService.updateProfile(userId, username, req.user!);
+    userService.updateDisplayName(userId, req.body.display_name, req.user!);
+    res.json({ message: 'updated' });
+  },
+
+  resetMfa(req: Request, res: Response) {
+    userService.resetMfa(parseInt(req.params.id as string, 10), req.user!);
+    res.json({ message: 'reset' });
+  },
+
+  async updateLoginId(req: Request, res: Response) {
+    const userId = parseInt(req.params.id as string, 10);
+    userService.updateLoginId(userId, req.body.username, req.user!);
     res.json({ message: 'updated' });
   },
 

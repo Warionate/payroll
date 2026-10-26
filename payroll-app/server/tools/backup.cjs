@@ -5,6 +5,9 @@ const fs = require('fs');
 const DB_PATH = path.resolve(__dirname, '../payroll.db');
 const BACKUP_DIR = path.resolve(__dirname, '../backups');
 
+// 単体で呼ばれたとき（デプロイ前のスナップショット）も、写しを本人だけが読めるように作る
+process.umask(0o077);
+
 // Ensure backup directory exists
 if (!fs.existsSync(BACKUP_DIR)) {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });

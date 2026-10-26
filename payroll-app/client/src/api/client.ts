@@ -2,6 +2,16 @@ import axios, { AxiosError, AxiosResponse, type InternalAxiosRequestConfig } fro
 
 interface RetriableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  _reauthRetry?: boolean;
+}
+
+// --- 大事な操作の前の本人確認 ---
+// サーバが 403 + reauth: true を返したら、画面（ReauthDialog）にパスワードを聞かせ、
+// 確認が済んだら元のリクエストを1回だけやり直す。ダイアログを閉じたら false
+let reauthHandler: (() => Promise<boolean>) | null = null;
+
+export function setReauthHandler(handler: (() => Promise<boolean>) | null) {
+  reauthHandler = handler;
 }
 
 export const apiClient = axios.create({
@@ -96,6 +106,25 @@ export const setupInterceptors = (onUnauth: () => void) => {
       }
 
       if (!originalRequest) {
+        return Promise.reject(error);
+      }
+
+      const data = error.response?.data as { reauth?: boolean; setup?: unknown } | undefined;
+      if (error.response?.status === 403 && data?.setup) {
+        // 最初の設定がまだ（ほかの端末で設定を外した等）。画面を設定に切り替えさせる
+        window.dispatchEvent(new CustomEvent('account-setup-required'));
+      }
+      if (
+        error.response?.status === 403 &&
+        data?.reauth &&
+        !originalRequest._reauthRetry &&
+        reauthHandler
+      ) {
+        originalRequest._reauthRetry = true;
+        if (await reauthHandler()) {
+          delete originalRequest.signal;
+          return apiClient(originalRequest);
+        }
         return Promise.reject(error);
       }
 

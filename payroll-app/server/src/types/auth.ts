@@ -9,6 +9,8 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      /** アクセストークンの sid（どのログインから来たか）。sessions 導入前のトークンには無い */
+      sessionId?: string;
     }
   }
 }

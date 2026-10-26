@@ -18,7 +18,7 @@ export interface WebauthnCredentialRow {
   last_used_at: string | null;
 }
 
-export type WebauthnPurpose = 'register' | 'login';
+export type WebauthnPurpose = 'register' | 'login' | 'reauth';
 
 export interface WebauthnChallengeRow {
   id: string;
@@ -65,6 +65,12 @@ export const webauthnRepository = {
       .where(and(eq(webauthnCredentials.id, id), eq(webauthnCredentials.user_id, userId)))
       .run();
     return result.changes > 0;
+  },
+
+  /** その人のパスキーを全部消す（管理者による二段階認証のリセット） */
+  deleteAllForUser(userId: number): number {
+    return db.delete(webauthnCredentials).where(eq(webauthnCredentials.user_id, userId)).run()
+      .changes;
   },
 
   createChallenge(row: Omit<WebauthnChallengeRow, 'created_at'>): void {

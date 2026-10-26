@@ -143,7 +143,7 @@ export default function Layout() {
             )}
             <div className="flex items-center gap-4 ml-4 border-l border-gray-200 pl-4">
               <AnnouncementBell variant="desktop" size={20} />
-              <span className="text-sm text-gray-500">{user?.username}</span>
+              <span className="text-sm text-gray-500">{user?.display_name || user?.username}</span>
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
@@ -156,7 +156,9 @@ export default function Layout() {
             </div>
           </div>
           <div className="md:hidden flex items-center">
-            <span className="text-sm text-gray-500 mr-2">{user?.username}</span>
+            <span className="text-sm text-gray-500 mr-2">
+              {user?.display_name || user?.username}
+            </span>
             <AnnouncementBell variant="mobile" size={24} />
             <Link
               to="/help"

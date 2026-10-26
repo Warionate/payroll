@@ -280,6 +280,8 @@ router.get('/download/:filename', authenticateToken, async (req: Request, res: R
     return;
   }
 
+  // filename は直前で .. / \ を拒否し、直後で uploadDir 配下かを確かめている
+  // nosemgrep: javascript.express.security.audit.express-path-join-resolve-traversal.express-path-join-resolve-traversal
   const filePath = path.resolve(uploadDir, filename);
 
   // Verify file is within upload directory (security)

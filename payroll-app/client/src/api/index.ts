@@ -38,6 +38,8 @@ export {
   fetchUsers,
   deleteUser,
   updateUserProfile,
+  updateUserLoginId,
+  resetUserMfa,
   updateUserPassword,
   updateUserRole,
 } from './users';

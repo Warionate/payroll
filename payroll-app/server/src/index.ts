@@ -175,11 +175,14 @@ if (process.env.NODE_ENV === 'production' && cluster.isPrimary) {
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
       // Validate Host header before reflecting it into a redirect
+      // （Host は直後の VALID_HOST_RE で検証する。オープンリダイレクトにはならない）
+      // nosemgrep: ajinabraham.njsscan.redirect.open_redirect.express_open_redirect
       const host = req.headers.host ?? '';
       if (!VALID_HOST_RE.test(host)) {
         res.status(400).send('Bad Request');
         return;
       }
+      // nosemgrep: ajinabraham.njsscan.redirect.open_redirect.express_open_redirect
       res.redirect('https://' + host + req.url);
       return;
     }
@@ -197,7 +200,8 @@ if (process.env.NODE_ENV === 'production' && cluster.isPrimary) {
           // WebSocket is no longer used (G章でチャット/Socket.IO を撤去)。
           // connectSrc は API(fetch) と Cloudflare Insights のみ。
           connectSrc: ["'self'", 'https://cloudflareinsights.com', 'data:'],
-          imgSrc: ["'self'", 'data:', 'https:'],
+          // 外部の画像は読まない（お知らせの Markdown に外部の画像を埋めて、開いた人を追跡されないように）
+          imgSrc: ["'self'", 'data:', 'blob:'],
           styleSrc: ["'self'", "'unsafe-inline'"],
           fontSrc: ["'self'", 'data:'],
           baseUri: ["'self'"],
@@ -224,6 +228,26 @@ if (process.env.NODE_ENV === 'production' && cluster.isPrimary) {
       crossOriginResourcePolicy: { policy: 'same-site' },
     }),
   );
+
+  // 使わないブラウザの機能を止める（パスキーは自分のサイトでだけ使う）
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader(
+      'Permissions-Policy',
+      [
+        'camera=()',
+        'microphone=()',
+        'geolocation=()',
+        'payment=()',
+        'usb=()',
+        'serial=()',
+        'bluetooth=()',
+        'browsing-topics=()',
+        'publickey-credentials-create=(self)',
+        'publickey-credentials-get=(self)',
+      ].join(', '),
+    );
+    next();
+  });
 
   app.use(cookieParser());
 
@@ -412,6 +436,8 @@ if (process.env.NODE_ENV === 'production' && cluster.isPrimary) {
 
   // /api/status — keeps old clients (cached SW) from getting stuck on maintenance screen
   app.get('/api/status', (_req: Request, res: Response) => {
+    // 古いクライアント（キャッシュされた SW）向けの公開の定数応答。認証情報は含まない
+    // nosemgrep: ajinabraham.njsscan.headers.header_cors_star.express_cors
     res.set('Access-Control-Allow-Origin', '*');
     res.json({ maintenance: false, mode: 'none' });
   });

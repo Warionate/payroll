@@ -5,7 +5,7 @@ import { authApi } from '../../api/auth';
 import { useConfirm } from '../../hooks/useConfirm';
 import { formatApiError } from '../../utils/apiError';
 
-// Authentik から戻ってきたときの結果（サーバが /settings?oidc=... で返す）
+// Authentik から戻ってきたときの結果（サーバが /settings/security?oidc=... で返す）
 const RESULT_MESSAGES: Record<string, { ok: boolean; text: string }> = {
   linked: { ok: true, text: 'Authentik と連携しました。次からは Authentik でもログインできます' },
   taken: { ok: false, text: 'その Authentik アカウントは、既に別のアカウントと連携されています' },

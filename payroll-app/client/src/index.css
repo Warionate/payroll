@@ -558,3 +558,9 @@ html {
   text-decoration: line-through;
   color: #94a3b8;
 }
+
+/* 設定のサブ画面: 部品が1つだけのときは、部品の見出しがページの見出しと重なるので隠す */
+.settings-single > section > h2:first-child,
+.settings-single > section > div:only-child > h2:first-child {
+  display: none;
+}

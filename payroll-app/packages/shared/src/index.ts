@@ -9,6 +9,7 @@
 export type {
   User,
   UserRole,
+  AccountSetup,
   Rate,
   RateInput,
   RateWageFields,
@@ -47,6 +48,12 @@ export {
   updatePasswordSchema,
   passwordFormSchema,
   usernameSchema,
+  displayNameSchema,
+  loginIdField,
+  displayNameField,
+  LOGIN_ID_PATTERN,
+  LOGIN_ID_RULE,
+  isValidLoginId,
   COMMON_PASSWORDS,
   ratesSchema,
   salaryAdjustmentSchema,
@@ -57,6 +64,7 @@ export type {
   UpdatePasswordInput,
   PasswordFormInput,
   UsernameInput,
+  DisplayNameInput,
   RatesSchemaInput,
   SalaryAdjustmentSchemaInput,
 } from './schemas/index.js';

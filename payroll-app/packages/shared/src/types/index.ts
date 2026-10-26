@@ -1,5 +1,5 @@
 // Types barrel export
-export type { User, UserRole } from './user.js';
+export type { User, UserRole, AccountSetup } from './user.js';
 export type { Rate, RateInput, RateWageFields } from './rate.js';
 export type {
   WorkLog,

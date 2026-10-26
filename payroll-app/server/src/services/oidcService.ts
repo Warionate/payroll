@@ -4,6 +4,11 @@
  * 既存アカウントが主で、Authentik はそこに紐づける補助の入口。
  *   - purpose 'link'  : ログイン中の本人が設定画面から始める。戻ってきた sub をその本人に紐づける
  *   - purpose 'login' : 紐づけ済みの sub のときだけログインさせる。新しいアカウントは作らない
+ *   - purpose 'reauth': ログイン中の本人の、大事な操作の前の本人確認。Authentik にログインし直してもらう
+ *     （prompt=login・max_age=0）
+ *
+ * ID トークンの amr（認証の方法）も返す。Authentik の二段階は任意なので、二段階を済ませたか
+ * （mfa・user＝パスキーだけ・sc＝証明書）は呼び出し側が isStrongAmr で見る
  *
  * .env に OIDC_* が揃っていなければ機能ごと無効（ルートは 404 相当の応答を返す）。
  */
@@ -37,8 +42,17 @@ function getConfig(): Promise<client.Configuration> {
 export interface OidcResult {
   purpose: OidcPurpose;
   userId: number | null;
+  sessionId: string | null;
   sub: string;
   groups: string[];
+  amr: string[];
+}
+
+/** Authentik の amr のうち、二段階を済ませたとみなすもの（mfa・パスキーだけのログイン・証明書） */
+const STRONG_AMR = ['mfa', 'user', 'sc'];
+
+export function isStrongAmr(amr: string[]): boolean {
+  return amr.some((m) => STRONG_AMR.includes(m));
 }
 
 export const oidcService = {
@@ -58,6 +72,7 @@ export const oidcService = {
   async start(
     purpose: OidcPurpose,
     userId: number | null,
+    sessionId: string | null = null,
   ): Promise<{ url: string; state: string }> {
     const s = settings()!;
     const config = await getConfig();
@@ -72,6 +87,7 @@ export const oidcService = {
       nonce,
       purpose,
       user_id: userId,
+      session_id: sessionId,
     });
 
     const url = client.buildAuthorizationUrl(config, {
@@ -81,6 +97,8 @@ export const oidcService = {
       code_challenge_method: 'S256',
       state,
       nonce,
+      // 本人確認では、Authentik にログイン済みでも改めてログインしてもらう
+      ...(purpose === 'reauth' ? { prompt: 'login', max_age: '0' } : {}),
     });
     return { url: url.href, state };
   },
@@ -111,7 +129,17 @@ export const oidcService = {
     if (!claims?.sub) throw new Error('ID トークンに sub が無い');
 
     const groups = Array.isArray(claims.groups) ? (claims.groups as unknown[]).map(String) : [];
-    logger.info(`OIDC callback verified (purpose=${row.purpose}, sub=${claims.sub})`);
-    return { purpose: row.purpose, userId: row.user_id, sub: claims.sub, groups };
+    const amr = Array.isArray(claims.amr) ? (claims.amr as unknown[]).map(String) : [];
+    logger.info(
+      `OIDC callback verified (purpose=${row.purpose}, sub=${claims.sub}, amr=${amr.join('+') || '-'})`,
+    );
+    return {
+      purpose: row.purpose,
+      userId: row.user_id,
+      sessionId: row.session_id ?? null,
+      sub: claims.sub,
+      groups,
+      amr,
+    };
   },
 };

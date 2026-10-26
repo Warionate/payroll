@@ -1,4 +1,4 @@
-import { Trash2, Users, Lock, UserCog } from 'lucide-react';
+import { Trash2, Users, Lock, UserCog, ShieldOff } from 'lucide-react';
 import SkeletonRow from '../loading/SkeletonRow';
 import AdminBadge from '../common/AdminBadge';
 import { parseSQLDate } from '../../utils/dateUtils';
@@ -11,6 +11,7 @@ interface Props {
   onDeleteUser: (id: number) => void;
   onUpdateRole: (user: User) => void;
   onOpenResetModal: (id: number, username: string) => void;
+  onResetMfa: (user: User) => void;
 }
 
 export default function UserManagementTable({
@@ -20,6 +21,7 @@ export default function UserManagementTable({
   onDeleteUser,
   onUpdateRole,
   onOpenResetModal,
+  onResetMfa,
 }: Props) {
   return (
     <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -48,9 +50,32 @@ export default function UserManagementTable({
                   <td className="py-3 px-4">{u.id}</td>
                   <td className="py-3 px-4 font-bold">
                     <span className="inline-flex items-center gap-1">
-                      {u.username}
+                      {u.display_name || u.username}
                       {u.role === 'admin' && <AdminBadge size={14} />}
                     </span>
+                    <span className="block text-xs font-normal font-mono text-gray-400">
+                      {u.username}
+                    </span>
+                    {u.setup && (u.setup.email || u.setup.mfa || u.setup.loginId) && (
+                      <span
+                        className="mt-1 inline-block text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5"
+                        title="最初の設定が済んでいません"
+                      >
+                        設定がまだ：
+                        {[
+                          u.setup.loginId && 'ID',
+                          u.setup.email && 'メール',
+                          u.setup.mfa && '二段階',
+                        ]
+                          .filter(Boolean)
+                          .join('・')}
+                        {u.setup_deadline &&
+                          `（${new Date(u.setup_deadline).toLocaleDateString('ja-JP', {
+                            month: 'numeric',
+                            day: 'numeric',
+                          })} に自動削除）`}
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <span
@@ -81,6 +106,16 @@ export default function UserManagementTable({
                     >
                       <Lock size={18} />
                     </button>
+                    {u.id !== currentUser.id && u.role !== 'admin' && (
+                      <button
+                        onClick={() => onResetMfa(u)}
+                        className="text-gray-400 hover:text-amber-600 transition-colors btn-interactive min-w-[32px] min-h-[32px] flex items-center justify-center pt-1"
+                        title="二段階認証をリセット"
+                        aria-label={`${u.username}の二段階認証をリセット`}
+                      >
+                        <ShieldOff size={18} />
+                      </button>
+                    )}
                     {u.id !== currentUser.id && u.username !== 'admin' && (
                       <button
                         onClick={() => onDeleteUser(u.id)}

@@ -5,7 +5,7 @@ import { eq, lt } from 'drizzle-orm';
 import { drizzleDb as db } from '../db.js';
 import { oidcStates } from '../schema.js';
 
-export type OidcPurpose = 'login' | 'link';
+export type OidcPurpose = 'login' | 'link' | 'reauth';
 
 export interface OidcStateRow {
   state: string;
@@ -13,6 +13,7 @@ export interface OidcStateRow {
   nonce: string;
   purpose: OidcPurpose;
   user_id: number | null;
+  session_id: string | null;
   created_at: string;
 }
 

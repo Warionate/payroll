@@ -5,6 +5,9 @@ import {
   loginSchema,
   updatePasswordSchema,
   usernameSchema,
+  displayNameSchema,
+  loginIdField,
+  displayNameField,
   COMMON_PASSWORDS,
   ratesSchema,
   salaryAdjustmentSchema,
@@ -106,11 +109,8 @@ const optionalRatesSchema = z
 
 export const registerValidation = z
   .object({
-    username: z
-      .string()
-      .trim()
-      .min(3, 'ユーザー名は3〜50文字である必要があります')
-      .max(50, 'ユーザー名は3〜50文字である必要があります'),
+    username: loginIdField,
+    display_name: displayNameField.optional(),
     password: passwordSchema,
     rates: optionalRatesSchema,
     // メール送信が有効な環境では必須（authController.register で判定）。確認メールのリンクで有効になる
@@ -133,7 +133,8 @@ export const registerValidation = z
 
 export const updatePasswordValidation = updatePasswordSchema;
 
-export const updateProfileValidation = usernameSchema;
+export const updateProfileValidation = displayNameSchema;
+export const updateLoginIdValidation = usernameSchema;
 
 // ── Rates ──────────────────────────────────────────────────────────
 

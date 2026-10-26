@@ -234,7 +234,7 @@ export const patternAssignmentRepository = {
         end_date: patternAssignments.end_date,
         pattern_id: patternAssignments.pattern_id,
         pattern_name: schedulePatterns.name,
-        username: users.username,
+        username: sql<string>`coalesce(${users.display_name}, ${users.username})`,
       })
       .from(patternAssignments)
       .innerJoin(schedulePatterns, eq(patternAssignments.pattern_id, schedulePatterns.id))

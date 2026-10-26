@@ -13,7 +13,7 @@ export default function PublicHelp() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo-header.svg" alt="Payroll App" className="h-8" />
-            <span className="font-bold text-gray-500 text-sm ml-2 border-l pl-2">
+            <span className="hidden sm:inline font-bold text-gray-500 text-sm ml-2 border-l pl-2">
               ユーザーマニュアル
             </span>
           </div>
@@ -22,7 +22,8 @@ export default function PublicHelp() {
             className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors"
           >
             <ArrowLeft size={16} />
-            ログイン画面へ戻る
+            <span className="sm:hidden">ログイン</span>
+            <span className="hidden sm:inline">ログイン画面へ戻る</span>
           </Link>
         </div>
       </header>

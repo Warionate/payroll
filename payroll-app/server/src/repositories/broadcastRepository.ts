@@ -42,7 +42,7 @@ export const broadcastRepository = {
         show_on_open: broadcasts.show_on_open,
         created_at: broadcasts.created_at,
         updated_at: broadcasts.updated_at,
-        sender_name: users.username,
+        sender_name: sql<string>`coalesce(${users.display_name}, ${users.username})`,
         is_read: sql<number>`CASE WHEN ${broadcastReads.read_at} IS NOT NULL THEN 1 ELSE 0 END`,
         read_count: sql<number>`(SELECT COUNT(*) FROM broadcast_reads WHERE broadcast_id = ${broadcasts.id})`,
       })
@@ -143,7 +143,7 @@ export const broadcastRepository = {
     return db
       .select({
         id: users.id,
-        username: users.username,
+        username: sql<string>`coalesce(${users.display_name}, ${users.username})`,
         role: users.role,
         read_at: broadcastReads.read_at,
       })

@@ -1,5 +1,5 @@
 const Database = require('better-sqlite3');
-const bcrypt = require('bcrypt');
+const argon2 = require('argon2');
 const path = require('path');
 
 const dbPath = path.resolve(__dirname, '../payroll.db');
@@ -14,6 +14,7 @@ if (!password) {
   process.exit(1);
 }
 
+(async () => {
 try {
   const row = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
 
@@ -23,7 +24,12 @@ try {
     console.log(`User '${username}' does not exist.`);
   }
 
-  const hash = bcrypt.hashSync(password, 10);
+  const hash = await argon2.hash(password, {
+    type: argon2.argon2id,
+    memoryCost: 19456,
+    timeCost: 2,
+    parallelism: 1,
+  });
 
   const updateResult = db
     .prepare("UPDATE users SET password_hash = ?, role = 'admin' WHERE username = ?")
@@ -45,3 +51,4 @@ try {
 } finally {
   db.close();
 }
+})();

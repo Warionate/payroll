@@ -136,6 +136,33 @@ describe('passkeyService', () => {
       );
     });
 
+    it("refuses someone else's passkey when the check was started for a specific user", async () => {
+      mockWebauthnRepository.takeChallenge.mockReturnValue({
+        id: 'c',
+        challenge: 'x',
+        purpose: 'login',
+        user_id: 5,
+      });
+      mockWebauthnRepository.findCredential.mockReturnValue({ id: 'cred', user_id: 9 });
+
+      await expect(
+        passkeyService.verifyAuthentication('c', response, { purpose: 'login', userId: 5 }),
+      ).rejects.toThrow('このアカウントのパスキーではありません');
+    });
+
+    it('refuses a login challenge used for re-authentication', async () => {
+      mockWebauthnRepository.takeChallenge.mockReturnValue({
+        id: 'c',
+        challenge: 'x',
+        purpose: 'login',
+        user_id: 5,
+      });
+
+      await expect(
+        passkeyService.verifyAuthentication('c', response, { purpose: 'reauth', userId: 5 }),
+      ).rejects.toThrow(PasskeyError);
+    });
+
     it('returns the owner and updates the counter when verified', async () => {
       mockWebauthnRepository.takeChallenge.mockReturnValue({
         id: 'c',

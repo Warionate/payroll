@@ -13,7 +13,7 @@ import {
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
   type AuthenticationResponseJSON,
-  type AuthenticatorTransportFuture,
+  type AuthenticatorTransport,
   type RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import logger from '../utils/logger.js';
@@ -34,9 +34,12 @@ function settings() {
  * 利用者番号をそのまま入れず、秘密鍵つきのハッシュにする（user handle は端末に平文で残るため）。
  */
 function userHandle(userId: number): Uint8Array<ArrayBuffer> {
+  // 鍵は JWT_SECRET と分ける（JWT_SECRET を入れ替えても user handle が変わらないように）。
+  // 未設定なら従来どおり JWT_SECRET を使う（導入前の環境は .env に今の JWT_SECRET の値を入れて移す）
+  const secret = process.env.WEBAUTHN_USER_HANDLE_SECRET || process.env.JWT_SECRET!;
   // Buffer を直接渡すと型が Uint8Array<ArrayBufferLike> になり、ライブラリの型に合わない
   return Uint8Array.from(
-    crypto.createHmac('sha256', process.env.JWT_SECRET!).update(`webauthn-user:${userId}`).digest(),
+    crypto.createHmac('sha256', secret).update(`webauthn-user:${userId}`).digest(),
   );
 }
 
@@ -59,12 +62,13 @@ export const passkeyService = {
       rpID: s.rpID,
       userID: userHandle(user.id),
       userName: user.username,
+      userDisplayName: userRepository.findById(user.id)?.display_name ?? user.username,
       attestationType: 'none',
       // 同じ端末に二重に登録しない
       excludeCredentials: existing.map((c) => ({
         id: c.id,
         transports: c.transports
-          ? (JSON.parse(c.transports) as AuthenticatorTransportFuture[])
+          ? (JSON.parse(c.transports) as AuthenticatorTransport[])
           : undefined,
       })),
       authenticatorSelection: {
@@ -117,19 +121,34 @@ export const passkeyService = {
     logger.info(`Passkey registered: user #${userId}`);
   },
 
-  /** ログインを始める（ユーザー名は聞かない） */
-  async authenticationOptions() {
+  /**
+   * パスキーでの確認を始める。
+   * - 利用者を指定しない: ユーザー名なしのログイン（端末に入っているパスキーから選ぶ）
+   * - 利用者を指定する: パスワードのあとの二段階目（purpose 'login'）・大事な操作の前の本人確認
+   *   （purpose 'reauth'）。その人のパスキーだけを候補に出し、確かめるときも本人のものかを見る
+   */
+  async authenticationOptions(userId?: number, purpose: 'login' | 'reauth' = 'login') {
     const s = settings()!;
+    const allow = userId ? webauthnRepository.listByUser(userId) : [];
+    if (userId && allow.length === 0) throw new PasskeyError('パスキーが登録されていません');
     const options = await generateAuthenticationOptions({
       rpID: s.rpID,
       userVerification: 'required',
+      allowCredentials: userId
+        ? allow.map((c) => ({
+            id: c.id,
+            transports: c.transports
+              ? (JSON.parse(c.transports) as AuthenticatorTransport[])
+              : undefined,
+          }))
+        : undefined,
     });
     const challengeId = crypto.randomBytes(32).toString('base64url');
     webauthnRepository.createChallenge({
       id: challengeId,
       challenge: options.challenge,
-      purpose: 'login',
-      user_id: null,
+      purpose,
+      user_id: userId ?? null,
     });
     return { options, challengeId };
   },
@@ -138,16 +157,26 @@ export const passkeyService = {
   async verifyAuthentication(
     challengeId: string | undefined,
     response: AuthenticationResponseJSON,
+    expected: { purpose?: 'login' | 'reauth'; userId?: number } = {},
   ): Promise<UserRow> {
     const s = settings()!;
+    const purpose = expected.purpose ?? 'login';
     const row = challengeId ? webauthnRepository.takeChallenge(challengeId) : undefined;
-    if (!row || row.purpose !== 'login') {
-      throw new PasskeyError('ログインの有効期限が切れました。もう一度お試しください');
+    if (
+      !row ||
+      row.purpose !== purpose ||
+      (expected.userId !== undefined && row.user_id !== expected.userId)
+    ) {
+      throw new PasskeyError('確認の有効期限が切れました。もう一度お試しください');
     }
     const credential = webauthnRepository.findCredential(response.id);
     if (!credential) {
       // 削除済みのパスキーが端末に残っている場合もここに来る
       throw new PasskeyError('このパスキーは登録されていません');
+    }
+    // 利用者を指定して始めた確認では、その人のパスキーでなければ通さない
+    if (row.user_id !== null && credential.user_id !== row.user_id) {
+      throw new PasskeyError('このアカウントのパスキーではありません');
     }
     const verification = await verifyAuthenticationResponse({
       response,
@@ -160,7 +189,7 @@ export const passkeyService = {
         publicKey: Uint8Array.from(Buffer.from(credential.public_key, 'base64url')),
         counter: credential.counter,
         transports: credential.transports
-          ? (JSON.parse(credential.transports) as AuthenticatorTransportFuture[])
+          ? (JSON.parse(credential.transports) as AuthenticatorTransport[])
           : undefined,
       },
     });

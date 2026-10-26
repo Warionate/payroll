@@ -304,14 +304,67 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     resetInterceptorState(); // Clear any stale refresh state BEFORE login attempt
     try {
       const data = await authApi.login(username, password);
-      const { user } = data;
-      setUser(user);
+      if (data.mfaRequired) {
+        return { success: false as const, mfaRequired: true, methods: data.methods ?? ['totp'] };
+      }
+      setUser(data.user ?? null);
       return { success: true as const };
     } catch (error) {
       console.error('Login failed:', error);
       return { success: false as const, error: formatApiError(error, 'ログインに失敗しました') };
     }
   };
+
+  const loginTotp = async (code: string, remember = false) => {
+    try {
+      const data = await authApi.loginTotp(code, remember);
+      setUser(data.user);
+      return { success: true as const };
+    } catch (error) {
+      return {
+        success: false as const,
+        error: formatApiError(error, 'コードを確認できませんでした'),
+      };
+    }
+  };
+
+  const loginSecondPasskey = async () => {
+    try {
+      const options = await authApi.loginPasskeyOptions();
+      let response;
+      try {
+        response = await startAuthentication({ optionsJSON: options });
+      } catch (error) {
+        if ((error as Error).name === 'NotAllowedError') {
+          return { success: false as const, cancelled: true };
+        }
+        throw error;
+      }
+      const data = await authApi.loginPasskeyVerify(response);
+      setUser(data.user);
+      return { success: true as const };
+    } catch (error) {
+      return {
+        success: false as const,
+        error: formatApiError(error, 'パスキーで確認できませんでした'),
+      };
+    }
+  };
+
+  const refreshUser = useCallback(async () => {
+    try {
+      setUser(await authApi.me());
+    } catch {
+      // 取れなければ今の状態のまま（401 ならインターセプタがログアウトさせる）
+    }
+  }, []);
+
+  // API が「最初の設定がまだ」（403 + setup）を返したら、/me を取り直して設定画面に切り替える
+  useEffect(() => {
+    const handler = () => void refreshUser();
+    window.addEventListener('account-setup-required', handler);
+    return () => window.removeEventListener('account-setup-required', handler);
+  }, [refreshUser]);
 
   const loginWithPasskey = async () => {
     resetInterceptorState();
@@ -339,10 +392,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const register = async (username: string, password: string, rates: RateInput, email?: string) => {
+  const register = async (
+    username: string,
+    password: string,
+    rates: RateInput,
+    email?: string,
+    displayName?: string,
+  ) => {
     resetInterceptorState();
     try {
-      const data = await authApi.register(username, password, rates, email || undefined);
+      const data = await authApi.register(
+        username,
+        password,
+        rates,
+        email || undefined,
+        displayName || undefined,
+      );
       const { user } = data;
       setUser(user);
       return { success: true as const, emailVerificationSent: Boolean(data.emailVerificationSent) };
@@ -363,7 +428,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, maintenance, login, loginWithPasskey, logout, register, updateUser }}
+      value={{
+        user,
+        loading,
+        maintenance,
+        login,
+        loginTotp,
+        loginSecondPasskey,
+        refreshUser,
+        loginWithPasskey,
+        logout,
+        register,
+        updateUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

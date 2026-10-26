@@ -48,6 +48,7 @@ function AdminDashboard() {
     deleteMutation: deleteUserMutation,
     updatePasswordMutation,
     updateRoleMutation,
+    resetMfaMutation,
   } = useUserMutation();
   const {
     createPatternMutation,
@@ -121,6 +122,25 @@ function AdminDashboard() {
         console.error('Role update failed:', error);
         toast.error('権限変更に失敗しました');
       }
+    }
+  };
+
+  const handleResetMfa = async (targetUser: User) => {
+    if (
+      !(await confirm({
+        title: '二段階認証のリセット',
+        message: `${targetUser.display_name || targetUser.username}（${targetUser.username}）のパスキー・認証アプリ・回復コード・Authentik 連携をすべて外し、全端末からログアウトさせます。\n\n本人が端末も回復コードも失くした場合だけ使ってください。本人確認（電話や対面など）を済ませてから行ってください。本人は次にパスワードでログインしたとき、二段階認証を登録し直します。`,
+        isDestructive: true,
+        confirmLabel: 'リセットする',
+      }))
+    ) {
+      return;
+    }
+    try {
+      await resetMfaMutation.mutateAsync({ id: targetUser.id });
+      toast.success('二段階認証をリセットしました');
+    } catch (error: unknown) {
+      toast.error(formatApiError(error, 'リセットできませんでした'));
     }
   };
 
@@ -343,6 +363,7 @@ function AdminDashboard() {
         onDeleteUser={handleDeleteUser}
         onUpdateRole={handleUpdateRole}
         onOpenResetModal={openResetModal}
+        onResetMfa={handleResetMfa}
       />
 
       <BroadcastForm />

@@ -11,3 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+// このプロセスが作るファイル（payroll.db の WAL/SHM・バックアップ・アップロード）を本人だけが読めるようにする。
+// 同じサーバーの別ユーザー（クラウドの既定ユーザー等）から DB を読まれないため
+process.umask(0o077);

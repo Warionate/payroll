@@ -3,6 +3,8 @@ import {
   fetchUsers,
   deleteUser,
   updateUserProfile,
+  updateUserLoginId,
+  resetUserMfa,
   updateUserPassword,
   updateUserRole,
 } from '../api';
@@ -29,8 +31,19 @@ export const useUserMutation = () => {
   });
 
   const updateProfileMutation = useMutation({
+    mutationFn: ({ id, displayName }: { id: number; displayName: string }) =>
+      updateUserProfile(id, displayName),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  const resetMfaMutation = useMutation({
+    mutationFn: ({ id }: { id: number }) => resetUserMfa(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  const updateLoginIdMutation = useMutation({
     mutationFn: ({ id, username }: { id: number; username: string }) =>
-      updateUserProfile(id, username),
+      updateUserLoginId(id, username),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
 
@@ -55,6 +68,8 @@ export const useUserMutation = () => {
   return {
     deleteMutation,
     updateProfileMutation,
+    updateLoginIdMutation,
+    resetMfaMutation,
     updatePasswordMutation,
     updateRoleMutation,
   };

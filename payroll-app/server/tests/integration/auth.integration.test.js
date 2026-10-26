@@ -63,7 +63,7 @@ describe('Auth API Integration Tests', () => {
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
-      expect(res.body.error).toContain('既に使用されています');
+      expect(res.body.error).toContain('既に使われています');
     });
 
     it('should reject invalid username (too short)', async () => {
@@ -113,8 +113,9 @@ describe('Auth API Integration Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers['set-cookie']).toBeDefined();
-      expect(res.headers['set-cookie'][0]).toContain('token=');
-      expect(res.headers['set-cookie'][0]).toContain('HttpOnly');
+      const tokenCookie = res.headers['set-cookie'].find((c) => c.startsWith('token='));
+      expect(tokenCookie).toBeDefined();
+      expect(tokenCookie).toContain('HttpOnly');
     });
 
     it('should reject wrong password', async () => {
@@ -173,7 +174,9 @@ describe('Auth API Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('message', 'Token refreshed');
       expect(res.body).toHaveProperty('user');
-      expect(res.body.user).toEqual({ id: testUserId, username: testUsername, role: 'user' });
+      expect(res.body.user).toMatchObject({ id: testUserId, username: testUsername, role: 'user' });
+      // 表示名と「済ませていない最初の設定」も付く（テストでは設定を強制しないので全部 false）
+      expect(res.body.user.setup).toEqual({ email: false, mfa: false, loginId: false });
       // New auth cookies are issued on rotation
       expect(res.headers['set-cookie']).toBeDefined();
       expect(res.headers['set-cookie'].some((c) => c.startsWith('token='))).toBe(true);

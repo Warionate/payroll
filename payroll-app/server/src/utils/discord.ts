@@ -227,3 +227,19 @@ export function notifyBroadcast(params: {
     ],
   });
 }
+
+/**
+ * セキュリティの注意喚起（管理者のログイン・管理者権限の付与・ログイン失敗の急増）。
+ * 本人や管理者が心当たりを確かめられるよう、何が起きたかだけを短く送る
+ */
+export function notifySecurityAlert(params: {
+  title: string;
+  fields: { name: string; value: string; inline?: boolean }[];
+  severity?: 'info' | 'warning';
+}): void {
+  void send('security', {
+    title: params.title,
+    color: params.severity === 'warning' ? COLORS.red : COLORS.yellow,
+    fields: params.fields.map((f) => ({ ...f, value: truncate(f.value, 300) })),
+  });
+}

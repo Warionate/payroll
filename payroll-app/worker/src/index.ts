@@ -165,7 +165,7 @@ async function checkMonitorLiveness(env: Env, now: number): Promise<void> {
                 '',
                 'この間は payroll-app の障害を検知・通知できません。',
                 'Worker は直近のメンテ判定を最大 10 分使った後、payroll-app にそのまま通します。',
-                'ステータスサーバーのプロセス状態を確認してください。',
+                'サーバーで `pm2 status` を確認してください。',
               ].join('\n'),
               color: 0xf59e0b,
               timestamp: new Date(now).toISOString(),

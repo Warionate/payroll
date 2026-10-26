@@ -61,7 +61,7 @@ function decryptWith(key, text) {
     const iv = Buffer.from(parts[0], 'hex');
     const authTag = Buffer.from(parts[1], 'hex');
     const encrypted = Buffer.from(parts[2], 'hex');
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv, { authTagLength: 16 });
     decipher.setAuthTag(authTag);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
   }
@@ -79,7 +79,7 @@ function decryptWith(key, text) {
 
 function encryptWith(key, text) {
   const iv = crypto.randomBytes(GCM_IV_LENGTH);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv, { authTagLength: 16 });
   const encrypted = Buffer.concat([cipher.update(String(text), 'utf8'), cipher.final()]);
   return (
     iv.toString('hex') + ':' + cipher.getAuthTag().toString('hex') + ':' + encrypted.toString('hex')

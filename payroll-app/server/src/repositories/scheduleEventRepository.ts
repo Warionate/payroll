@@ -54,7 +54,7 @@ export const scheduleEventRepository = {
         start_time: scheduleEvents.start_time,
         end_time: scheduleEvents.end_time,
         created_by: scheduleEvents.created_by,
-        creator_name: users.username,
+        creator_name: sql<string>`coalesce(${users.display_name}, ${users.username})`,
         created_at: scheduleEvents.created_at,
         updated_at: scheduleEvents.updated_at,
       })
@@ -80,7 +80,7 @@ export const scheduleEventRepository = {
         start_time: scheduleEvents.start_time,
         end_time: scheduleEvents.end_time,
         created_by: scheduleEvents.created_by,
-        creator_name: users.username,
+        creator_name: sql<string>`coalesce(${users.display_name}, ${users.username})`,
         created_at: scheduleEvents.created_at,
         updated_at: scheduleEvents.updated_at,
       })

@@ -6,19 +6,24 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUserMutation } from '../../hooks/useUsers';
 import { toast } from 'react-hot-toast';
 import { formatApiError } from '../../utils/apiError';
-import { passwordFormSchema, usernameSchema, COMMON_PASSWORDS } from '@payroll/shared';
+import { passwordFormSchema, displayNameSchema, COMMON_PASSWORDS } from '@payroll/shared';
+import LoginIdForm from '../account/LoginIdForm';
 import DeleteAccountModal from './DeleteAccountModal';
 import type { AxiosError } from 'axios';
 
-export default function AccountSettings() {
+/** 設定画面のサブ画面ごとに出す部分。省略すると全部 */
+type AccountPart = 'profile' | 'password' | 'delete';
+
+export default function AccountSettings({ part }: { part?: AccountPart } = {}) {
+  const show = (p: AccountPart) => !part || part === p;
   const { user, updateUser } = useAuth();
   const { updateProfileMutation, updatePasswordMutation, deleteMutation } = useUserMutation();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Username form with React Hook Form
-  const usernameForm = useForm({
-    resolver: zodResolver(usernameSchema),
-    defaultValues: { username: user?.username || '' },
+  // 表示名（画面に出す名前）
+  const displayNameForm = useForm({
+    resolver: zodResolver(displayNameSchema),
+    defaultValues: { display_name: user?.display_name || user?.username || '' },
   });
 
   // Password form with React Hook Form + Zod
@@ -29,14 +34,14 @@ export default function AccountSettings() {
 
   if (!user) return null;
 
-  const handleUpdateProfile = async (data: { username: string }) => {
+  const handleUpdateProfile = async (data: { display_name: string }) => {
     try {
-      await updateProfileMutation.mutateAsync({ id: user.id, username: data.username });
-      updateUser({ username: data.username });
-      toast.success('ユーザー名を更新しました');
+      await updateProfileMutation.mutateAsync({ id: user.id, displayName: data.display_name });
+      updateUser({ display_name: data.display_name });
+      toast.success('表示名を更新しました');
     } catch (error: unknown) {
       console.error('Profile update failed:', error);
-      toast.error('ユーザー名の更新に失敗しました');
+      toast.error(formatApiError(error, '表示名の更新に失敗しました'));
     }
   };
 
@@ -96,93 +101,107 @@ export default function AccountSettings() {
       </h2>
 
       <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-6">
-        {/* ユーザー名変更 */}
-        <form onSubmit={usernameForm.handleSubmit(handleUpdateProfile)}>
-          <label className="block text-xs font-bold text-gray-400 mb-1">ユーザー名</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              {...usernameForm.register('username')}
-              className="flex-1 p-2 border rounded font-bold"
-            />
-            <button
-              type="submit"
-              className="bg-purple-600 text-white px-4 rounded-lg font-bold text-sm hover:bg-purple-700"
-            >
-              更新
-            </button>
-          </div>
-          {usernameForm.formState.errors.username && (
-            <p className="text-xs text-red-500 mt-1">
-              {usernameForm.formState.errors.username.message}
-            </p>
-          )}
-        </form>
+        {show('profile') && (
+          <>
+            {/* 表示名 */}
+            <form onSubmit={displayNameForm.handleSubmit(handleUpdateProfile)}>
+              <label className="block text-xs font-bold text-gray-400 mb-1">
+                表示名（画面に出る名前）
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  maxLength={50}
+                  {...displayNameForm.register('display_name')}
+                  className="flex-1 p-2 border rounded font-bold"
+                />
+                <button
+                  type="submit"
+                  className="bg-purple-600 text-white px-4 rounded-lg font-bold text-sm hover:bg-purple-700"
+                >
+                  更新
+                </button>
+              </div>
+              {displayNameForm.formState.errors.display_name && (
+                <p className="text-xs text-red-500 mt-1">
+                  {displayNameForm.formState.errors.display_name.message}
+                </p>
+              )}
+            </form>
 
-        <hr className="border-gray-100" />
+            {/* ユーザー ID（ログインに使う） */}
+            <LoginIdForm />
+          </>
+        )}
+
+        {!part && <hr className="border-gray-100" />}
 
         {/* パスワード変更 */}
-        <form onSubmit={passwordForm.handleSubmit(handleUpdatePassword)} className="space-y-3">
-          <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-            <Lock size={16} /> パスワード変更
-          </h3>
-          <div>
-            <input
-              type="password"
-              placeholder="現在のパスワード"
-              {...passwordForm.register('currentPassword')}
-              className="w-full p-2 border rounded mb-2"
-            />
-            {passwordForm.formState.errors.currentPassword && (
-              <p className="text-xs text-red-500 mb-2">
-                {passwordForm.formState.errors.currentPassword.message}
-              </p>
-            )}
-            <input
-              type="password"
-              placeholder="新しいパスワード"
-              {...passwordForm.register('password')}
-              className="w-full p-2 border rounded mb-2"
-            />
-            {passwordForm.formState.errors.password && (
-              <p className="text-xs text-red-500 mb-2">
-                {passwordForm.formState.errors.password.message}
-              </p>
-            )}
-            <input
-              type="password"
-              placeholder="パスワード確認"
-              {...passwordForm.register('confirmPassword')}
-              className="w-full p-2 border rounded"
-            />
-            {passwordForm.formState.errors.confirmPassword && (
-              <p className="text-xs text-red-500 mt-1">
-                {passwordForm.formState.errors.confirmPassword.message}
-              </p>
-            )}
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-gray-800 text-white py-2 rounded-lg font-bold text-sm hover:bg-gray-900"
-          >
-            パスワードを変更
-          </button>
-        </form>
+        {show('password') && (
+          <form onSubmit={passwordForm.handleSubmit(handleUpdatePassword)} className="space-y-3">
+            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <Lock size={16} /> パスワード変更
+            </h3>
+            <div>
+              <input
+                type="password"
+                placeholder="現在のパスワード"
+                {...passwordForm.register('currentPassword')}
+                className="w-full p-2 border rounded mb-2"
+              />
+              {passwordForm.formState.errors.currentPassword && (
+                <p className="text-xs text-red-500 mb-2">
+                  {passwordForm.formState.errors.currentPassword.message}
+                </p>
+              )}
+              <input
+                type="password"
+                placeholder="新しいパスワード"
+                {...passwordForm.register('password')}
+                className="w-full p-2 border rounded mb-2"
+              />
+              {passwordForm.formState.errors.password && (
+                <p className="text-xs text-red-500 mb-2">
+                  {passwordForm.formState.errors.password.message}
+                </p>
+              )}
+              <input
+                type="password"
+                placeholder="パスワード確認"
+                {...passwordForm.register('confirmPassword')}
+                className="w-full p-2 border rounded"
+              />
+              {passwordForm.formState.errors.confirmPassword && (
+                <p className="text-xs text-red-500 mt-1">
+                  {passwordForm.formState.errors.confirmPassword.message}
+                </p>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-gray-800 text-white py-2 rounded-lg font-bold text-sm hover:bg-gray-900"
+            >
+              パスワードを変更
+            </button>
+          </form>
+        )}
 
-        <hr className="border-gray-100" />
+        {!part && <hr className="border-gray-100" />}
 
         {/* アカウント削除 */}
-        <div className="pt-2">
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="w-full py-2 border border-red-200 text-red-600 rounded-lg font-bold text-sm hover:bg-red-50 flex items-center justify-center gap-2"
-          >
-            <Trash2 size={16} /> アカウントを削除
-          </button>
-          <p className="text-[10px] text-red-400 text-center mt-2">
-            ※削除すると全てのデータが失われます
-          </p>
-        </div>
+        {show('delete') && (
+          <div className="pt-2">
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="w-full py-2 border border-red-200 text-red-600 rounded-lg font-bold text-sm hover:bg-red-50 flex items-center justify-center gap-2"
+            >
+              <Trash2 size={16} /> アカウントを削除
+            </button>
+            <p className="text-[10px] text-red-400 text-center mt-2">
+              ※削除すると全てのデータが失われます
+            </p>
+          </div>
+        )}
       </div>
 
       {showDeleteModal && (

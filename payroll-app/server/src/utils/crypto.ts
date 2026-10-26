@@ -30,7 +30,8 @@ const KEY = Buffer.from(ENCRYPTION_KEY, 'utf8');
 // AES-256-GCM (authenticated encryption): format is iv:authTag:ciphertext (hex)
 const GCM_IV_LENGTH = 12;
 const GCM_IV_HEX_LENGTH = GCM_IV_LENGTH * 2;
-const GCM_TAG_HEX_LENGTH = 16 * 2;
+const GCM_TAG_BYTES = 16;
+const GCM_TAG_HEX_LENGTH = GCM_TAG_BYTES * 2;
 
 export function encrypt(text: string | number | null | undefined): string | null | undefined {
   if (text === null || text === undefined) return text;
@@ -38,7 +39,7 @@ export function encrypt(text: string | number | null | undefined): string | null
   if (strText === '') return strText;
   try {
     const iv = crypto.randomBytes(GCM_IV_LENGTH);
-    const cipher = crypto.createCipheriv('aes-256-gcm', KEY, iv);
+    const cipher = crypto.createCipheriv('aes-256-gcm', KEY, iv, { authTagLength: GCM_TAG_BYTES });
     const encrypted = Buffer.concat([cipher.update(strText, 'utf8'), cipher.final()]);
     const authTag = cipher.getAuthTag();
     return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted.toString('hex');
@@ -66,7 +67,11 @@ export function decrypt(text: string | null | undefined): string | null | undefi
       const iv = Buffer.from(textParts[0], 'hex');
       const authTag = Buffer.from(textParts[1], 'hex');
       const encryptedText = Buffer.from(textParts[2], 'hex');
-      const decipher = crypto.createDecipheriv('aes-256-gcm', KEY, iv);
+      // タグ長を固定する。hex でない文字が混ざると Buffer.from が短いタグを作り、
+      // 短いタグは改ざん検知を弱める（Node は長さを指定しないと短いタグも受け入れる）
+      const decipher = crypto.createDecipheriv('aes-256-gcm', KEY, iv, {
+        authTagLength: GCM_TAG_BYTES,
+      });
       decipher.setAuthTag(authTag);
       const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
       return decrypted.toString('utf8');

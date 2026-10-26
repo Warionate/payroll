@@ -1,0 +1,23 @@
+# gitleaks の設定（CI の security-scan.yml が使う）。既定のルールに、テスト用のダミー値の除外だけを足す
+[extend]
+useDefault = true
+
+[allowlist]
+description = "テスト用の固定値（本物の鍵ではない）"
+paths = [
+  # 現在のテスト用ファイル
+  '''^server/tests/''',
+  # 過去の履歴にあったテスト用ファイル（ルート直下・旧 server/middleware の *.test.js）
+  '''(^|/)[^/]*\.test\.(js|ts)$''',
+  '''^vitest(\.integration)?\.config\.(js|mjs)$''',
+  # CI のテスト用の固定値（本物は ${{ secrets.* }} で渡す）
+  '''^\.github/workflows/ci\.yml$''',
+  '''^server/vitest(\.integration)?\.config\.mjs$''',
+  '''^client/playwright\.config\.ts$''',
+  '''^client/e2e/''',
+]
+# Cloudflare Web Analytics のビーコン用トークン（ブラウザに配る公開の値）
+regexTarget = "line"
+regexes = [
+  '''data-cf-beacon''',
+]

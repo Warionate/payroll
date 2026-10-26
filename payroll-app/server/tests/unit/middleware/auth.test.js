@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 const { mockUserRepository } = vi.hoisted(() => ({
   mockUserRepository: {
-    getRole: vi.fn(),
+    findById: vi.fn(),
   },
 }));
 
@@ -29,8 +29,8 @@ describe('auth middleware', () => {
   const createTestToken = (user) => jwt.sign(user, process.env.JWT_SECRET, { expiresIn: '15m' });
 
   beforeEach(() => {
-    mockUserRepository.getRole.mockReset();
-    mockUserRepository.getRole.mockReturnValue('user');
+    mockUserRepository.findById.mockReset();
+    mockUserRepository.findById.mockReturnValue({ id: 1, role: 'user' });
   });
 
   describe('authenticateToken', () => {
@@ -104,7 +104,7 @@ describe('auth middleware', () => {
     });
 
     it('should return 401 when user no longer exists (deleted user)', () => {
-      mockUserRepository.getRole.mockReturnValue(undefined);
+      mockUserRepository.findById.mockReturnValue(undefined);
       const token = createTestToken({ id: 99, username: 'ghost', role: 'user' });
 
       const req = {
@@ -124,7 +124,7 @@ describe('auth middleware', () => {
     });
 
     it('should fall back to JWT role when DB role check throws', () => {
-      mockUserRepository.getRole.mockImplementation(() => {
+      mockUserRepository.findById.mockImplementation(() => {
         throw new Error('db unavailable');
       });
       const token = createTestToken({ id: 1, username: 'testuser', role: 'admin' });

@@ -16,6 +16,8 @@ import {
 import { decrypt } from './utils/crypto.js';
 import { checkpointRateLimitDb } from './utils/rateLimitStore.js';
 import { authService } from './services/authService.js';
+import { userService } from './services/userService.js';
+import { userRepository } from './repositories/userRepository.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,6 +67,15 @@ const checkUnconfirmedAndNotify = (): void => {
 
 const initScheduler = (): void => {
   logger.info('Initializing scheduler...');
+
+  // カレンダー連携のトークンを、平文から暗号化 + ハッシュに移す（移し終わっていれば何もしない）
+  try {
+    const migrated = userRepository.migrateLegacyCalendarTokens();
+    if (migrated > 0)
+      logger.info(`Migrated ${migrated} calendar tokens to encrypted + hashed form.`);
+  } catch (err) {
+    logger.error(`Failed to migrate calendar tokens: ${(err as Error).message}`);
+  }
 
   // Schedule backup at 04:00 JST every day.
   // backup.sh は bash 前提（rclone でのクラウドアップロード含む）のため、
@@ -130,6 +141,16 @@ const initScheduler = (): void => {
 
     logger.info('Scheduler initialized. Backup scheduled for 04:00 JST.');
   }
+
+  // 新規登録のあと期限までに最初の設定を済ませなかったアカウントを、1 時間ごとに消す
+  cron.schedule('17 * * * *', () => {
+    try {
+      const deleted = userService.cleanupIncompleteSignups();
+      if (deleted > 0) logger.info(`Deleted ${deleted} accounts that did not finish setup.`);
+    } catch (err) {
+      logger.error(`Failed to cleanup incomplete signups: ${(err as Error).message}`);
+    }
+  });
 
   // Schedule expired broadcast file cleanup at 05:00 JST every day
   cron.schedule(

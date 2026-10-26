@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
+import ReauthDialog from './components/security/ReauthDialog';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/app/Layout';
 import Login from './pages/Login';
@@ -22,6 +23,9 @@ const Announcements = lazy(() => import('./pages/Announcements'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const AccountSetup = lazy(() => import('./pages/AccountSetup'));
+const Register = lazy(() => import('./pages/Register'));
+const ReauthComplete = lazy(() => import('./pages/ReauthComplete'));
 
 interface RequireAuthProps {
   children: ReactNode;
@@ -37,6 +41,15 @@ function RequireAuth({ children }: RequireAuthProps) {
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // 最初の設定（ユーザー ID・メールの確認・二段階）を済ませるまでは、設定の画面しか出さない
+  if (user.setup && (user.setup.loginId || user.setup.email || user.setup.mfa)) {
+    return (
+      <Suspense fallback={<SplashScreen />}>
+        <AccountSetup />
+      </Suspense>
+    );
   }
 
   return children;
@@ -67,8 +80,27 @@ function App() {
       <AuthProvider>
         <MaintenanceGate>
           <BrowserRouter>
+            {/* 大事な操作の前の本人確認（API が求めたときだけ開く） */}
+            <ReauthDialog />
             <Routes>
               <Route path="/login" element={<Login />} />
+              {/* Authentik での本人確認から戻ってくる小さなウィンドウ */}
+              <Route
+                path="/reauth-complete"
+                element={
+                  <Suspense fallback={<SplashScreen />}>
+                    <ReauthComplete />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <Suspense fallback={<SplashScreen />}>
+                    <Register />
+                  </Suspense>
+                }
+              />
               {/* メールのリンク先。ログインしていない端末でも開ける */}
               {(
                 [
@@ -125,6 +157,14 @@ function App() {
                 />
                 <Route
                   path="settings"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <Settings />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="settings/:section"
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <Settings />

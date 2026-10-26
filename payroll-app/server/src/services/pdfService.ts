@@ -209,9 +209,10 @@ export const pdfService = {
     const hourlyEndDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${lastDay}`;
 
     // Fetch data
-    const user = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as
-      { username: string } | undefined;
-    const username = user?.username || '不明';
+    const user = db
+      .prepare('SELECT coalesce(display_name, username) AS name FROM users WHERE id = ?')
+      .get(userId) as { name: string } | undefined;
+    const username = user?.name || '不明';
 
     const minDate = classStartDate < hourlyStartDate ? classStartDate : hourlyStartDate;
     const maxDate = classEndDate > hourlyEndDate ? classEndDate : hourlyEndDate;

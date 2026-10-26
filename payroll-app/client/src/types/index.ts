@@ -51,7 +51,23 @@ export interface AuthContextType {
   user: User | null;
   loading: boolean;
   maintenance: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  /** 認証アプリを登録している人は mfaRequired: true が返る。続けて loginTotp を呼ぶ */
+  login: (
+    username: string,
+    password: string,
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    mfaRequired?: boolean;
+    /** 二段階目に使える手段（totp・passkey・oidc） */
+    methods?: ('totp' | 'passkey' | 'oidc')[];
+  }>;
+  /** ログインの二段階目をパスキーで。取り消されたときは cancelled: true */
+  loginSecondPasskey: () => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
+  /** ログインの二段階目（認証アプリのコード・回復コード） */
+  loginTotp: (code: string, remember?: boolean) => Promise<{ success: boolean; error?: string }>;
+  /** /me を取り直す（最初の設定を進めたあとなど） */
+  refreshUser: () => Promise<void>;
   /** パスキーでログインする（ユーザー名は不要）。取り消されたときは cancelled: true */
   loginWithPasskey: () => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
   logout: () => Promise<void>;
@@ -60,6 +76,7 @@ export interface AuthContextType {
     password: string,
     rates: RateInput,
     email?: string,
+    displayName?: string,
   ) => Promise<{
     success: boolean;
     error?: string;
