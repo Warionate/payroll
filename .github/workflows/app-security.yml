@@ -26,5 +26,7 @@ jobs:
 
       # devDependency 含む全件チェック。失敗時は GitHub の workflow 失敗通知で気づける。
       # PR 単位のチェック（本番依存のみ・ブロッキング）は ci.yml の audit / dependency-review が担う。
+      - name: Use npm 12
+        run: npm install -g npm@12.2.1
       - name: Audit dependencies
         run: npm audit --audit-level=high
